@@ -13,6 +13,7 @@ use core::{convert::TryFrom, fmt};
 /// `Split()` method, called after a handshake has been finished.
 ///
 /// See: <https://noiseprotocol.org/noise.html#the-handshakestate-object>
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct StatelessTransportState {
     cipherstates: StatelessCipherStates,
     pattern: HandshakePattern,

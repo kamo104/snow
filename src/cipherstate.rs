@@ -167,6 +167,7 @@ impl CipherStates {
     }
 }
 
+#[derive(bincode::Encode, bincode::Decode)]
 pub(crate) struct StatelessCipherState {
     cipher: Box<dyn Cipher>,
     has_key: bool,
@@ -233,6 +234,7 @@ impl From<CipherState> for StatelessCipherState {
     }
 }
 
+#[derive(bincode::Encode, bincode::Decode)]
 pub(crate) struct StatelessCipherStates(pub StatelessCipherState, pub StatelessCipherState);
 
 impl From<CipherStates> for StatelessCipherStates {
