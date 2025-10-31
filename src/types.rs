@@ -1,8 +1,8 @@
 //! The traits for cryptographic implementations that can be used by Noise.
 
 use crate::{
-    constants::{CIPHERKEYLEN, MAXBLOCKLEN, MAXHASHLEN, TAGLEN},
     Error,
+    constants::{CIPHERKEYLEN, MAXBLOCKLEN, MAXHASHLEN, TAGLEN},
 };
 
 /// CSPRNG operations
@@ -60,6 +60,8 @@ pub trait Cipher: Send + Sync {
     /// Set the key
     fn set(&mut self, key: &[u8; CIPHERKEYLEN]);
 
+    fn encode_self(&self) -> Vec<u8>;
+    fn decode_self(&self, encoded: Vec<u8>) -> Box<dyn Cipher>;
     /// Encrypt (with associated data) a given plaintext.
     fn encrypt(&self, nonce: u64, authtext: &[u8], plaintext: &[u8], out: &mut [u8]) -> usize;
 

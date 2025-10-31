@@ -1,16 +1,67 @@
+use core::str::FromStr;
+
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
 
 use crate::{
     constants::{CIPHERKEYLEN, TAGLEN},
     error::{Error, InitStage, StateProblem},
+    params::CipherChoice,
+    resolvers::{self, CryptoResolver},
     types::Cipher,
 };
 
+#[derive(bincode::Encode, bincode::Decode)]
 pub(crate) struct CipherState {
     cipher: Box<dyn Cipher>,
     n: u64,
     has_key: bool,
+}
+
+impl<'de, Context> bincode::BorrowDecode<'de, Context> for Box<dyn Cipher> {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        // 1. Read the type
+        let choice: CipherChoice = bincode::BorrowDecode::borrow_decode(decoder)?;
+
+        // 2. Read the encoded bytes
+        let encoded: Vec<u8> = bincode::BorrowDecode::borrow_decode(decoder)?;
+
+        let cipher = resolvers::DefaultResolver.resolve_cipher(&choice).unwrap();
+        Ok(cipher.decode_self(encoded))
+    }
+}
+
+impl<Context> bincode::Decode<Context> for Box<dyn Cipher> {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        // 1. Read the type
+        let choice: CipherChoice = CipherChoice::decode(decoder)?;
+
+        // 2. Read the encoded bytes
+        let encoded: Vec<u8> = Vec::<u8>::decode(decoder)?;
+
+        let cipher = resolvers::DefaultResolver.resolve_cipher(&choice).unwrap();
+        Ok(cipher.decode_self(encoded))
+    }
+}
+impl bincode::Encode for Box<dyn Cipher> {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        // 1. Write the type
+        let choice: CipherChoice = CipherChoice::from_str(self.name()).unwrap();
+        choice.encode(encoder)?;
+
+        // 2. Write the concrete encoded data
+        let data = self.encode_self();
+        data.encode(encoder)?;
+
+        Ok(())
+    }
 }
 
 impl CipherState {
@@ -87,6 +138,7 @@ impl CipherState {
     }
 }
 
+#[derive(bincode::Encode, bincode::Decode)]
 pub(crate) struct CipherStates(pub CipherState, pub CipherState);
 
 impl CipherStates {
@@ -172,11 +224,7 @@ fn validate_nonce(current: u64) -> Result<(), Error> {
     // 2^64-1 is reserved and may not be used in the state machine (5.1).
     //
     // It is used by the default cipher rekey function (4.2).
-    if current == u64::MAX {
-        Err(Error::State(StateProblem::Exhausted))
-    } else {
-        Ok(())
-    }
+    if current == u64::MAX { Err(Error::State(StateProblem::Exhausted)) } else { Ok(()) }
 }
 
 impl From<CipherState> for StatelessCipherState {

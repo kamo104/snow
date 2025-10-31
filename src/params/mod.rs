@@ -65,7 +65,7 @@ impl FromStr for DHChoice {
 }
 
 /// One of `ChaChaPoly` or `AESGCM`, per the spec.
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, bincode::Encode, bincode::Decode)]
 pub enum CipherChoice {
     /// The ChaCha20Poly1305 AEAD.
     ChaChaPoly,

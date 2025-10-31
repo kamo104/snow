@@ -38,6 +38,7 @@ macro_rules! pattern_enum {
         /// section.
         #[allow(missing_docs)]
         #[derive(Copy, Clone, PartialEq, Debug)]
+        #[derive(bincode::Encode, bincode::Decode)]
         pub enum $name {
             $($variant),*,
         }
